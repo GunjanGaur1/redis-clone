@@ -1,67 +1,69 @@
 # Redis Clone in Go
 
-An educational Redis-inspired TCP key-value server written from scratch in Go. It uses a subset of RESP so clients such as `redis-cli` can send commands.
+I built this project to understand how Redis works under the hood, from handling TCP connections to storing data in memory and processing commands.
 
-## Implemented
+The goal is to build a lightweight, Redis-inspired key-value store from scratch using Go, without relying on Docker or an existing database implementation.
 
-- TCP server with concurrent client connections (goroutines)
-- RESP array/bulk-string command parsing and simple inline commands
-- `PING`, `ECHO`, `SET`, `GET`, `DEL`, `EXISTS`
-- Expiration with `SET key value EX seconds`, `EXPIRE`, and `TTL`
-- Hashes: `HSET`, `HGET`, `HGETALL`
-- Sets: `SADD`, `SMEMBERS`
-- Thread-safe shared store
-- JSON snapshot persistence with `SAVE` and startup loading
-- Graceful shutdown snapshot
-- No Docker required
+## What it can do
 
-## Not implemented
+- Accept client connections over TCP and handle multiple clients concurrently using goroutines.
+- Process Redis-style commands using a subset of the RESP protocol.
+- Store and retrieve values with `SET` and `GET`.
+- Delete keys and check whether they exist using `DEL` and `EXISTS`.
+- Set expiration times on keys using `EXPIRE`, `TTL`, and `SET ... EX`.
+- Work with hashes using `HSET`, `HGET`, and `HGETALL`.
+- Work with sets using `SADD` and `SMEMBERS`.
+- Save the current database state to a JSON file and load it again when the server restarts.
 
-This is not a complete Redis replacement. Replication, Pub/Sub, Redis ACLs, transactions, full RESP edge cases, eviction policies, and Redis-compatible persistence formats are not implemented.
+## Built with
 
-## Requirements
+- **Go** for the server and storage logic
+- **TCP sockets** for client-server communication
+- **RESP** for Redis-style command parsing and responses
+- **Goroutines and mutexes** for concurrent connections and thread-safe storage
+- **JSON** for saving and restoring database snapshots
 
-- Go 1.22+
-- Optional: `redis-cli` for convenient testing
+## Getting started
 
-## Run
+Make sure Go is installed on your machine.
 
-```bash
-go run . 
-```
-
-The server listens on `127.0.0.1:6379` (all interfaces on port 6379 by default) and stores snapshots in `dump.json`.
-
-To choose another address or snapshot path:
+Clone the repository and enter the project directory:
 
 ```bash
-go run . -addr 127.0.0.1:6380 -data ./data.json
+git clone https://github.com/GunjanGaur1/redis-clone.git
+cd redis-clone
 ```
 
-## Test with redis-cli
-
-In a second terminal:
+Start the server:
 
 ```bash
-redis-cli -p 6379 PING
-redis-cli -p 6379 SET name Gunjan
-redis-cli -p 6379 GET name
-redis-cli -p 6379 SET session abc EX 30
-redis-cli -p 6379 TTL session
-redis-cli -p 6379 HSET user name Gunjan
-redis-cli -p 6379 HGET user name
-redis-cli -p 6379 SADD languages Go Python
-redis-cli -p 6379 SMEMBERS languages
-redis-cli -p 6379 SAVE
+go run .
 ```
 
-If `redis-cli` is not installed, you can use `nc localhost 6379` for simple inline commands, one command per line:
+By default, the server listens on port `6379`.
+
+## Trying it out
+
+Open another terminal and connect to the server using `nc`:
+
+```bash
+nc localhost 6379
+```
+
+You can now enter commands directly:
 
 ```text
 PING
 SET name Gunjan
 GET name
+SET language Go
+GET language
+SAVE
 ```
+
+The server returns Redis-style responses. For example, `PING` returns `+PONG`, and `GET name` returns the stored value.
+
+If you have `redis-cli` installed, you can use it instead.
 
 ## Project structure
 
@@ -71,13 +73,23 @@ redis-clone/
 ├── go.mod
 ├── README.md
 └── internal/
-    ├── resp/       # RESP command parser and response encoders
-    ├── server/     # TCP listener and command dispatch
-    └── store/      # Thread-safe data structures and snapshots
+    ├── resp/
+    │   └── resp.go
+    ├── server/
+    │   └── server.go
+    └── store/
+        └── store.go
 ```
 
-## Important notes
+- `main.go` starts the server and handles shutdown.
+- `internal/server` manages TCP connections and dispatches commands.
+- `internal/resp` parses incoming commands and formats responses.
+- `internal/store` manages the in-memory database, expiration, and snapshots.
 
-- Data is primarily in memory. Use `SAVE` to write a JSON snapshot.
-- Snapshot saving is explicit plus a final save on graceful shutdown; this is not an append-only log.
-- Do not expose this educational server to untrusted networks.
+## Current limitations
+
+This is a learning project, not a full replacement for Redis. Replication, Pub/Sub, transactions, and append-only file persistence are not implemented yet. Persistence currently uses JSON snapshots rather than Redis's native persistence formats.
+
+## Why I built it
+
+I wanted to get hands-on experience with networking, concurrency, data structures, and persistence instead of treating a database as a black box. Building each part has helped me explore how a client request travels through a server and how data is stored, retrieved, and recovered.
